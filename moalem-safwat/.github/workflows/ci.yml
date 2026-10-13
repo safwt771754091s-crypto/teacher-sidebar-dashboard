@@ -1,0 +1,27 @@
+name: Moalem Safwat CI
+on:
+  push:
+    branches: [main, feat/moalem-safwat-mvp]
+    paths:
+      - 'moalem-safwat/**'
+  pull_request:
+    paths:
+      - 'moalem-safwat/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: moalem-safwat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: moalem-safwat/package-lock.json
+      - run: npm install
+      - run: npm run build
