@@ -15,6 +15,11 @@ type TimetableEntry = {
   lesson_title: string | null;
   start_time: string;
 };
+type CurriculumLesson = {
+  id: string; grade_level: number; subject_name: string; unit_title: string | null;
+  lesson_title: string; lesson_content: string; source_book: string; source_edition: string | null;
+  page_start: number | null; page_end: number | null;
+};
 
 const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const GRADES = [
@@ -55,6 +60,8 @@ function App() {
     full_name: '', grade_level: '', academic_track: null, school_name: null,
   });
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
+  const [lessons, setLessons] = useState<CurriculumLesson[]>([]);
+  const [selectedLesson, setSelectedLesson] = useState<CurriculumLesson | null>(null);
   const [day, setDay] = useState('0');
   const [subject, setSubject] = useState('');
   const [lesson, setLesson] = useState('');
@@ -89,12 +96,13 @@ function App() {
     async function loadStudentData() {
       const client = supabase;
       if (!client || !session) return;
-      const [p, schedule] = await Promise.all([
+      const [p, schedule, curriculum] = await Promise.all([
         client.from('student_profiles').select('full_name,grade_level,academic_track,school_name').eq('user_id', session.user.id).maybeSingle(),
         client.from('timetable_entries').select('id,day_of_week,subject_name,lesson_title,start_time').eq('user_id', session.user.id).order('day_of_week').order('start_time'),
+        client.from('curriculum_lessons').select('id,grade_level,subject_name,unit_title,lesson_title,lesson_content,source_book,source_edition,page_start,page_end').eq('published', true).eq('review_status', 'approved').order('grade_level').order('subject_name'),
       ]);
       if (cancelled) return;
-      if (p.error || schedule.error) {
+      if (p.error || schedule.error || curriculum.error) {
         setNotice('تعذر تحميل البيانات الدراسية. تحقق من تطبيق ترحيلات قاعدة البيانات وسياسات الأمان.');
         return;
       }
@@ -105,6 +113,7 @@ function App() {
         school_name: p.data.school_name ?? null,
       });
       setTimetable((schedule.data ?? []) as TimetableEntry[]);
+      setLessons((curriculum.data ?? []) as CurriculumLesson[]);
     }
     void loadStudentData();
     return () => { cancelled = true; };
@@ -121,6 +130,10 @@ function App() {
   const todaySchedule = useMemo(
     () => timetable.filter((entry) => entry.day_of_week === new Date().getDay()).sort((a, b) => a.start_time.localeCompare(b.start_time)),
     [timetable],
+  );
+  const visibleLessons = useMemo(
+    () => lessons.filter((item) => !profile.grade_level || String(item.grade_level) === profile.grade_level),
+    [lessons, profile.grade_level],
   );
 
   async function handleAuth(event: FormEvent) {
@@ -214,7 +227,7 @@ function App() {
   }
 
   function chooseWord(choice: string) {
-    if (choice === WORDS[wordIndex].ar) setWordFeedback('صحيح! ${WORDS[wordIndex].en} تعني ${WORDS[wordIndex].ar}.'.replace('${WORDS[wordIndex].en}', WORDS[wordIndex].en).replace('${WORDS[wordIndex].ar}', WORDS[wordIndex].ar));
+    if (choice === WORDS[wordIndex].ar) setWordFeedback(`صحيح! ${WORDS[wordIndex].en} تعني ${WORDS[wordIndex].ar}.`);
     else setWordFeedback(`حاول مرة أخرى. معنى ${WORDS[wordIndex].en} هو ${WORDS[wordIndex].ar}.`);
   }
 
@@ -293,9 +306,11 @@ function App() {
         </section>}
         {tab === 'curriculum' && <section className="page-content">
           <div className="page-intro"><div className="intro-icon"><BookOpen /></div><div><h2>المنهج اليمني</h2><p>اختر صفك الدراسي لمتابعة الدروس عند إتاحة محتواها المعتمد.</p></div></div>
-          <div className="notice-panel"><ShieldCheck size={21} /><div><strong>المحتوى الدراسي الرسمي</strong><p>لم تُربط كتب المنهج في قاعدة المحتوى بعد. لن نعرض عناوين أو حلولًا مختلقة على أنها من الكتاب المدرسي. يلزم رفع الكتب المعتمدة وفهرستها ومراجعة النص المستخرج قبل نشرها.</p></div></div>
+          {lessons.length === 0 && <div className="notice-panel"><ShieldCheck size={21} /><div><strong>المحتوى الدراسي الرسمي</strong><p>لا توجد دروس معتمدة منشورة في قاعدة المحتوى بعد. لن نعرض عناوين أو حلولًا مختلقة على أنها من الكتاب المدرسي. يلزم رفع الكتب المعتمدة وفهرستها ومراجعة النص المستخرج قبل نشرها.</p></div></div>}
           <div className="section-heading"><div><h2>الصفوف الدراسية</h2><p>من الصف الأول الأساسي إلى الثالث الثانوي.</p></div></div>
-          <div className="grade-grid">{GRADES.map((g) => <button className={profile.grade_level === g.value ? 'grade-card selected' : 'grade-card'} key={g.value} onClick={() => { setProfile((p) => ({ ...p, grade_level: g.value })); setNotice('تم اختيار الصف. احفظ ملفك من صفحة «ملفي وجدولي» لتثبيته في حسابك.'); }}><GraduationCap size={23} /><span>{g.label}</span><small>المواد والدروس بعد اعتماد المحتوى</small></button>)}</div>
+          <div className="grade-grid">{GRADES.map((g) => <button className={profile.grade_level === g.value ? 'grade-card selected' : 'grade-card'} key={g.value} onClick={() => { setProfile((p) => ({ ...p, grade_level: g.value })); setSelectedLesson(null); setNotice('تم اختيار الصف. احفظ ملفك من صفحة «ملفي وجدولي» لتثبيته في حسابك.'); }}><GraduationCap size={23} /><span>{g.label}</span><small>{lessons.some((item) => String(item.grade_level) === g.value) ? 'توجد دروس معتمدة' : 'بانتظار اعتماد المحتوى'}</small></button>)}</div>
+          {visibleLessons.length > 0 && <><div className="section-heading"><div><h2>الدروس المعتمدة</h2><p>محتوى منشور ومراجع من قاعدة المنهج.</p></div></div><div className="lesson-grid">{visibleLessons.map((item) => <button key={item.id} className={selectedLesson?.id === item.id ? 'lesson-card lesson-selected' : 'lesson-card'} onClick={() => setSelectedLesson(item)}><span>{item.subject_name}</span><strong>{item.lesson_title}</strong><small>{item.unit_title || 'وحدة غير محددة'}</small><b>عرض الدرس <ChevronLeft size={15} /></b></button>)}</div></>}
+          {selectedLesson && <article className="lesson-detail"><div className="card-heading"><div><span className="lesson-subject">{selectedLesson.subject_name}</span><h3>{selectedLesson.lesson_title}</h3></div><button className="icon-btn" aria-label="إغلاق الدرس" onClick={() => setSelectedLesson(null)}><X size={19} /></button></div><p className="lesson-body">{selectedLesson.lesson_content || 'لم تتم إضافة نص الدرس بعد.'}</p><div className="lesson-source"><BookOpen size={16} /><span>المصدر: {selectedLesson.source_book}{selectedLesson.source_edition ? ` — ${selectedLesson.source_edition}` : ''}{selectedLesson.page_start ? ` — صفحة ${selectedLesson.page_start}${selectedLesson.page_end && selectedLesson.page_end !== selectedLesson.page_start ? `–${selectedLesson.page_end}` : ''}` : ''}</span></div></article>}
           <div className="section-heading"><div><h2>كيف نضيف الكتب؟</h2><p>خطوات تجهيز المنهج للمعلّم الذكي.</p></div></div>
           <ol className="steps-list"><li>رفع ملفات الكتب المدرسية الموثوقة وبيانات الطبعة.</li><li>استخراج النصوص مع الحفاظ على أرقام الصفحات والعناوين.</li><li>مراجعة المحتوى ثم ربط كل تمرين بالدرس الصحيح.</li><li>اختبار الإجابات قبل إتاحتها للطلاب.</li></ol>
         </section>}
