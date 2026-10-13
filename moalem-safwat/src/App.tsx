@@ -210,7 +210,12 @@ function App() {
       if (error) throw error;
       const response = data?.answer;
       if (typeof response !== 'string' || !response.trim()) throw new Error('لم تصل إجابة صالحة من خدمة المعلّم.');
-      setAnswer(response);
+      const sources = Array.isArray(data?.sources) ? data.sources as Array<{ index?: number; title?: string; subject?: string; book?: string; edition?: string | null; page_start?: number | null; page_end?: number | null }> : [];
+      const sourceText = sources.length ? '\n\nالمصادر المعتمدة:\n' + sources.map((source) => {
+        const page = source.page_start ? '، صفحة ' + source.page_start + (source.page_end && source.page_end !== source.page_start ? '–' + source.page_end : '') : '';
+        return '[' + (source.index ?? '?') + '] ' + (source.subject ?? '') + ' — ' + (source.title ?? '') + '، ' + (source.book ?? 'كتاب غير محدد') + (source.edition ? ' (' + source.edition + ')' : '') + page;
+      }).join('\n') : '';
+      setAnswer(response + sourceText);
     } catch {
       setAnswer('خدمة الشرح الذكي غير مهيأة بعد. يلزم نشر وظيفة Supabase باسم student-tutor وربطها بمزوّد ذكاء اصطناعي آمن من جهة الخادم. لن أخترع إجابة أو أنسبها إلى كتاب غير متوفر.');
     } finally { setBusy(false); }
