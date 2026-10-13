@@ -54,7 +54,8 @@ function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(isSupabaseConfigured ? '' : 'وضع الاستكشاف متاح دون حساب؛ حفظ البيانات والشرح الذكي يحتاجان إلى ربط Supabase.');
+  const [offlineMode, setOfflineMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [profile, setProfile] = useState<StudentProfile>({
     full_name: '', grade_level: '', academic_track: null, school_name: null,
@@ -161,7 +162,7 @@ function App() {
 
   async function saveProfile(event: FormEvent) {
     event.preventDefault();
-    if (!supabase || !session) return;
+    if (!supabase || !session) { setNotice('للحفاظ على ملفك الدراسي في السحابة، اربط مشروع Supabase وسجّل الدخول أولًا.'); return; }
     setBusy(true); setNotice('');
     const { error } = await supabase.from('student_profiles').upsert({
       user_id: session.user.id,
@@ -177,7 +178,8 @@ function App() {
 
   async function addTimetableEntry(event: FormEvent) {
     event.preventDefault();
-    if (!supabase || !session || !subject.trim()) return;
+    if (!supabase || !session) { setNotice('إضافة الحصص وحفظها يحتاجان إلى ربط Supabase وتسجيل الدخول.'); return; }
+    if (!subject.trim()) return;
     setBusy(true); setNotice('');
     const { data, error } = await supabase.from('timetable_entries').insert({
       user_id: session.user.id, day_of_week: Number(day), subject_name: subject.trim(),
@@ -198,7 +200,8 @@ function App() {
 
   async function askTutor(event: FormEvent) {
     event.preventDefault();
-    if (!question.trim() || !supabase) return;
+    if (!question.trim()) return;
+    if (!supabase || !session) { setAnswer('خدمة الشرح الذكي غير مفعّلة في وضع الاستكشاف. اربط Supabase وسجّل الدخول ثم جهّز وظيفة student-tutor ومفتاح مزوّد الذكاء الاصطناعي على الخادم.'); return; }
     setBusy(true); setAnswer(''); setNotice('');
     try {
       const { data, error } = await supabase.functions.invoke('student-tutor', {
@@ -240,7 +243,7 @@ function App() {
 
   if (authLoading) return <div className="loading-screen"><div className="loader" /><p>جارٍ تجهيز المعلّم صفوت…</p></div>;
 
-  if (!isSupabaseConfigured) return (
+  if (!isSupabaseConfigured && !offlineMode) return (
     <main className="setup-screen">
       <div className="setup-card">
         <div className="brand-symbol"><GraduationCap size={34} /></div>
@@ -254,11 +257,12 @@ function App() {
           <li>أضف عنوان المشروع والمفتاح العام إلى متغيرات البيئة.</li>
         </ol>
         <p className="small-muted">لن نستخدم قاعدة بيانات الفائق يمن أو نعرض بيانات وهمية على أنها حقيقية.</p>
+        <button className="primary-btn full-btn" type="button" onClick={() => setOfflineMode(true)}>استكشف الواجهة والألعاب دون حساب <ChevronLeft size={17} /></button>
       </div>
     </main>
   );
 
-  if (!session) return (
+  if (isSupabaseConfigured && !session) return (
     <main className="auth-screen">
       <section className="auth-hero">
         <div className="brand-symbol"><GraduationCap size={38} /></div>
