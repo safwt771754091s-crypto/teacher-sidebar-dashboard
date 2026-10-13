@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import { readFileSync, existsSync } from 'node:fs';
+
+const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+const packageJson = JSON.parse(read('../package.json'));
+const migration = read('../supabase/migrations/202610140001_initial.sql');
+const app = read('../src/App.tsx');
+const tutor = read('../supabase/functions/student-tutor/index.ts');
+const manifest = JSON.parse(read('../public/manifest.webmanifest'));
+
+assert.equal(packageJson.name, 'moalem-safwat');
+assert.ok(packageJson.scripts.build, 'web build script must exist');
+assert.ok(packageJson.scripts.test, 'smoke test script must exist');
+assert.ok(existsSync(new URL('../capacitor.config.ts', import.meta.url)), 'Capacitor config must exist');
+assert.ok(existsSync(new URL('../../.github/workflows/moalem-safwat-android.yml', import.meta.url)), 'Android CI workflow must exist');
+assert.equal(manifest.lang, 'ar');
+assert.equal(manifest.dir, 'rtl');
+assert.ok(manifest.icons.length > 0, 'install manifest must reference an app icon');
+assert.match(migration, /enable row level security/ig);
+assert.match(migration, /students read own profile/);
+assert.match(migration, /students read own timetable/);
+assert.match(migration, /students add own attempts/);
+assert.match(migration, /published = true and review_status = 'approved'/);
+assert.doesNotMatch(migration, /insert into public\.curriculum_lessons/i, 'must not seed fake curriculum');
+assert.match(app, /student-tutor/);
+assert.match(app, /curriculum_lessons/);
+assert.match(app, /timetable_entries/);
+assert.match(tutor, /auth\.getUser/);
+assert.match(tutor, /OPENAI_API_KEY/);
+assert.match(tutor, /approved_curriculum_sources/);
+assert.match(tutor, /authentication_required/);
+console.log('Moalem Safwat smoke tests passed: project structure, RLS, empty curriculum seed, auth-gated tutor and web/Android configuration.');
