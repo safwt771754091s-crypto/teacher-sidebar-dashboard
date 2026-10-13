@@ -1,0 +1,13 @@
+{
+  "name": "المعلّم صفوت",
+  "short_name": "المعلّم صفوت",
+  "description": "رفيق الطالب اليمني في التعلّم والمراجعة",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f8f6",
+  "theme_color": "#146b5b",
+  "icons": []
+}
