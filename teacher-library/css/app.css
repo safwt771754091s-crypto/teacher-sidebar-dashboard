@@ -363,4 +363,7 @@ body.edit-hint [data-k]{box-shadow:0 0 0 1px rgba(200,155,155,.4) inset}
 @media (max-width:420px){
   .btn{padding:9px 14px;font-size:14px}
   .vt-icon{display:none}
+}/* إخفاء اسم الملف داخل العارض فقط مع إبقاء عنوان تبويب المتصفح */
+#vt-name {
+  display: none !important;
 }
