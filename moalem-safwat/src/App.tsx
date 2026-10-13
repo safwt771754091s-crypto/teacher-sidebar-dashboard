@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   BookOpen, CalendarDays, CheckCircle2, ChevronLeft, CircleHelp, Clock3,
   GraduationCap, Home, Languages, LogIn, LogOut, Menu, MessageCircle,
-  PencilLine, Play, Send, ShieldCheck, Sparkles, Star, UserRound, X,
+  Play, Send, ShieldCheck, Sparkles, Star, UserRound, X,
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase, type StudentProfile } from './lib/supabase';
 
