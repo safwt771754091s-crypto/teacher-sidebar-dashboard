@@ -1,6 +1,10 @@
 name: Moalem Safwat Android APK
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'moalem-safwat/**'
+      - '.github/workflows/moalem-safwat-android.yml'
   push:
     branches: [feat/moalem-safwat-mvp]
     paths:
